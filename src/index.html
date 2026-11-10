@@ -7,7 +7,14 @@
     table { border-collapse: collapse; width: 100%; }
     th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
     th { background: #f5f5f5; }
-    button { margin-top: 20px; padding: 10px 20px; font-size: 16px; }
+    button { padding: 10px 20px; font-size: 16px; }
+    #addButton { margin-top: 20px; }
+
+    .range { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 16px; }
+    .range input { font-size: 16px; padding: 4px; }
+    .range button { padding: 6px 16px; }
+    .hint { color: #666; font-size: 14px; }
+    .options p { margin: 8px 0; }
 
     #status {
       margin-top: 20px;
@@ -19,69 +26,143 @@
   </style>
 </head>
 <body>
-  <h1>Notionに追加する空き枠</h1>
-  <p>
-    <label>
-      <input type="checkbox" id="deleteExisting">
-      Notionの既存データをすべて削除してから登録する
-    </label>
-  </p>
-  <table>
-    <tr>
-      <th>追加</th>
-      <th>日付</th>
-      <th>朝</th>
-      <th>昼</th>
-      <th>夜</th>
-    </tr>
+  <h1>空き枠をNotionに追加するツール</h1>
 
-    <? for (let i = 0; i < availableDays.length; i++) { ?>
+  <div class="range">
+    <label>取得期間 <input type="date" id="startDate"></label>
+    <span>〜</span>
+    <label><input type="date" id="endDate"></label>
+    <button id="reloadButton" onclick="reload()">再判定</button>
+    <span class="hint" id="rangeHint"></span>
+  </div>
+
+  <div class="options">
+    <p>
+      <label>
+        <input type="checkbox" id="deleteExisting">
+        Notionの既存データをすべて削除してから登録する
+      </label>
+    </p>
+    <p>
+      <label>
+        <input type="checkbox" id="notifyDiscord">
+        Discordに通知する
+      </label>
+      <span class="hint" id="notifyHint"></span>
+    </p>
+  </div>
+
+  <table>
+    <thead>
       <tr>
-        <td><input type="checkbox" checked data-index="<?= i ?>"></td>
-        <td><?= availableDays[i].displayDate ?></td>
-        <td><?= availableDays[i].morning ?></td>
-        <td><?= availableDays[i].afternoon ?></td>
-        <td><?= availableDays[i].night ?></td>
+        <th><input type="checkbox" id="checkAll" checked title="すべて選択"></th>
+        <th>日付</th>
+        <th>朝</th>
+        <th>昼</th>
+        <th>夜</th>
       </tr>
-    <? } ?>
+    </thead>
+    <tbody id="days"></tbody>
   </table>
 
 <button id="addButton" onclick="addToNotion()">選択した空き枠をNotionに追加</button>
 <div id="status"></div>
 
 <script>
-const availableDays = <?!= JSON.stringify(availableDays) ?>;
+const initial = <?!= JSON.stringify(initial) ?>;
+let availableDays = initial.availableDays;
+
+const startInput = document.getElementById('startDate');
+const endInput = document.getElementById('endDate');
+const notifyInput = document.getElementById('notifyDiscord');
+const status = document.getElementById('status');
+
+startInput.value = initial.start;
+endInput.value = initial.end;
+document.getElementById('rangeHint').textContent = `最大${initial.maxDays}日まで`;
+
+if (initial.canNotify) {
+  notifyInput.checked = true;
+} else {
+  notifyInput.disabled = true;
+  document.getElementById('notifyHint').textContent = '（DISCORD_WEBHOOK_URL が未設定のため通知できません）';
+}
+
+document.getElementById('checkAll').addEventListener('change', e => {
+  document.querySelectorAll('input[data-index]').forEach(cb => { cb.checked = e.target.checked; });
+});
+
+function renderDays() {
+  const tbody = document.getElementById('days');
+  tbody.textContent = '';
+
+  if (availableDays.length === 0) {
+    const row = tbody.insertRow();
+    const cell = row.insertCell();
+    cell.colSpan = 5;
+    cell.textContent = 'この期間に空き枠はありません。';
+    return;
+  }
+
+  availableDays.forEach((day, i) => {
+    const row = tbody.insertRow();
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = true;
+    checkbox.dataset.index = i;
+    row.insertCell().appendChild(checkbox);
+    [day.displayDate, day.morning, day.afternoon, day.night].forEach(text => {
+      row.insertCell().textContent = text;
+    });
+  });
+  document.getElementById('checkAll').checked = true;
+}
+
+function showStatus(text) {
+  status.style.display = 'block';
+  status.textContent = text;
+}
+
+function reload() {
+  if (!startInput.value || !endInput.value) {
+    alert('開始日と終了日を入力してください。');
+    return;
+  }
+
+  const button = document.getElementById('reloadButton');
+  button.disabled = true;
+  showStatus('空き枠を判定しています...');
+
+  google.script.run
+    .withSuccessHandler(days => {
+      availableDays = days;
+      renderDays();
+      button.disabled = false;
+      showStatus(`${startInput.value} 〜 ${endInput.value} の空き枠：${days.length}日`);
+    })
+    .withFailureHandler(error => {
+      button.disabled = false;
+      showStatus('判定に失敗しました\n\n' + error.message);
+    })
+    .getAvailableDays(startInput.value, endInput.value);
+}
 
 function addToNotion() {
 
   const selected = [];
-  const deleteExisting = document.getElementById("deleteExisting").checked;
+  const deleteExisting = document.getElementById('deleteExisting').checked;
+  const notifyDiscord = notifyInput.checked;
 
   document.querySelectorAll('input[data-index]').forEach(cb => {
-
     if (cb.checked) {
-
-      const day = availableDays[Number(cb.dataset.index)];
-
-      if (!day.date && day.displayDate) {
-        day.date = day.displayDate.replace(/\//g, '-');
-      }
-
-      selected.push(day);
+      selected.push(availableDays[Number(cb.dataset.index)]);
     }
-
   });
-
-
-  console.log('送信データ:', selected);
-  console.log('型:', typeof selected);
-
 
   if (selected.length === 0) {
     alert('追加する空き枠を選択してください。');
     return;
   }
-
 
   let message = `${selected.length}件をNotionへ登録しますか？`;
   if (deleteExisting) {
@@ -90,45 +171,32 @@ function addToNotion() {
       `${selected.length}件を登録します。\n\n` +
       `よろしいですか？`;
   }
+  message += notifyDiscord ? '\n\n（Discordに通知します）' : '\n\n（Discordには通知しません）';
   if (!confirm(message)) {
     return;
   }
 
   const button = document.getElementById('addButton');
-  const status = document.getElementById('status');
-
 
   button.disabled = true;
   button.textContent = 'Notionへ追加中...';
-
-  status.style.display = 'block';
-  status.textContent = '処理中です。しばらくお待ちください。';
-
+  showStatus('処理中です。しばらくお待ちください。');
 
   google.script.run
-
     .withSuccessHandler(msg => {
-
       button.disabled = false;
       button.textContent = '選択した空き枠をNotionに追加';
-
-      status.textContent =
-        '処理完了\n\n' + msg;
-
+      showStatus('処理完了\n\n' + msg);
     })
-
     .withFailureHandler(error => {
-
       button.disabled = false;
       button.textContent = '選択した空き枠をNotionに追加';
-
-      status.textContent =
-        '処理失敗\n\n' + error.message;
-
+      showStatus('処理失敗\n\n' + error.message);
     })
-
-  .addSelectedToNotion(selected, deleteExisting);
+    .addSelectedToNotion(selected, deleteExisting, notifyDiscord);
 }
+
+renderDays();
 </script>
 
 </body>

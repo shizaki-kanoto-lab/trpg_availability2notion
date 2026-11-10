@@ -1,4 +1,6 @@
 /**
+ * 空き枠をNotionに追加するツール
+ *
  * Google カレンダーの予定から TRPG セッションの空き枠（朝・昼・夜）を判定し、
  * Web アプリで確認したうえで Notion データベースへ登録する。
  * 登録後は Discord に「◯月まで最新化しました」と通知する。
@@ -32,6 +34,9 @@ const EVE_NG_KEYWORD = PROPS.getProperty('EVE_NG_KEYWORD');
 
 const TIME_ZONE = 'Asia/Tokyo';
 
+// 一度に判定できる最大日数（GASの実行時間制限に収めるため）
+const MAX_RANGE_DAYS = 180;
+
 // 判定する時間帯（夜は翌日0時まで）
 const SLOTS = {
   morning: { startHour: 9, endHour: 12 },
@@ -63,23 +68,58 @@ function getRequiredProperty_(key) {
 
 // ===== Webアプリを開いた時 =====
 function doGet() {
+  const range = getDefaultRange_();
   const template = HtmlService.createTemplateFromFile('index');
-  template.availableDays = getAvailableDays();
+  template.initial = {
+    start: range.start,
+    end: range.end,
+    maxDays: MAX_RANGE_DAYS,
+    canNotify: Boolean(DISCORD_WEBHOOK_URL),
+    availableDays: getAvailableDays(range.start, range.end)
+  };
 
   return template.evaluate()
-    .setTitle('Notion空き枠追加確認');
+    .setTitle('空き枠をNotionに追加するツール');
 }
 
 function formatDate_(date) {
   return Utilities.formatDate(date, TIME_ZONE, 'yyyy-MM-dd');
 }
 
-// ===== 空き枠を取得 =====
-function getAvailableDays() {
-  // 実行日の翌日0時から、翌々月1日0時（翌月末まで）
+// 'yyyy-MM-dd' をその日の0時の Date にする
+function parseDate_(text) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text || '');
+  if (!match) {
+    throw new Error(`日付の形式が正しくありません: ${text}`);
+  }
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+}
+
+// 初期の取得期間：翌日から翌月末まで
+function getDefaultRange_() {
   const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-  const end = new Date(now.getFullYear(), now.getMonth() + 2, 1);
+  return {
+    start: formatDate_(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)),
+    end: formatDate_(new Date(now.getFullYear(), now.getMonth() + 2, 0))
+  };
+}
+
+// ===== 空き枠を取得 =====
+// startDate〜endDate（'yyyy-MM-dd'、両端を含む）を判定する。省略時は翌日〜翌月末
+function getAvailableDays(startDate, endDate) {
+  const defaults = getDefaultRange_();
+  const start = parseDate_(startDate || defaults.start);
+  const lastDay = parseDate_(endDate || defaults.end);
+  // 終了日の翌日0時まで
+  const end = new Date(lastDay.getFullYear(), lastDay.getMonth(), lastDay.getDate() + 1);
+
+  if (start >= end) {
+    throw new Error('終了日は開始日以降にしてください。');
+  }
+  const days = Math.round((end - start) / (24 * 60 * 60 * 1000));
+  if (days > MAX_RANGE_DAYS) {
+    throw new Error(`取得期間は${MAX_RANGE_DAYS}日以内にしてください（指定: ${days}日）。`);
+  }
 
   // 終日予定で丸1日NGになる日
   const allDayNg = {};
@@ -276,7 +316,8 @@ function queryNotionPages_(filter) {
 }
 
 // ===== 選択された空き枠をNotionへ追加（Webアプリから呼ばれる） =====
-function addSelectedToNotion(selectedDays, deleteExisting) {
+// notifyDiscord が false なら Discord に通知しない（省略時は通知する）
+function addSelectedToNotion(selectedDays, deleteExisting, notifyDiscord = true) {
 
   // JSON文字列なら配列へ戻す
   if (typeof selectedDays === 'string') {
@@ -349,7 +390,9 @@ function addSelectedToNotion(selectedDays, deleteExisting) {
       errors.join('\n')
     );
   }
-  sendDiscordUpdate(selectedDays);
+  if (notifyDiscord) {
+    sendDiscordUpdate(selectedDays);
+  }
   return `${success}件すべて追加しました。`;
 }
 
