@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    th { background: #f5f5f5; }
+    button { margin-top: 20px; padding: 10px 20px; font-size: 16px; }
+
+    #status {
+      margin-top: 20px;
+      padding: 10px;
+      white-space: pre-wrap;
+      border: 1px solid #ccc;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>Notionに追加する空き枠</h1>
+  <p>
+    <label>
+      <input type="checkbox" id="deleteExisting">
+      Notionの既存データをすべて削除してから登録する
+    </label>
+  </p>
+  <table>
+    <tr>
+      <th>追加</th>
+      <th>日付</th>
+      <th>朝</th>
+      <th>昼</th>
+      <th>夜</th>
+    </tr>
+
+    <? for (let i = 0; i < availableDays.length; i++) { ?>
+      <tr>
+        <td><input type="checkbox" checked data-index="<?= i ?>"></td>
+        <td><?= availableDays[i].displayDate ?></td>
+        <td><?= availableDays[i].morning ?></td>
+        <td><?= availableDays[i].afternoon ?></td>
+        <td><?= availableDays[i].night ?></td>
+      </tr>
+    <? } ?>
+  </table>
+
+<button id="addButton" onclick="addToNotion()">選択した空き枠をNotionに追加</button>
+<div id="status"></div>
+
+<script>
+const availableDays = <?!= JSON.stringify(availableDays) ?>;
+
+function addToNotion() {
+
+  const selected = [];
+  const deleteExisting = document.getElementById("deleteExisting").checked;
+
+  document.querySelectorAll('input[data-index]').forEach(cb => {
+
+    if (cb.checked) {
+
+      const day = availableDays[Number(cb.dataset.index)];
+
+      if (!day.date && day.displayDate) {
+        day.date = day.displayDate.replace(/\//g, '-');
+      }
+
+      selected.push(day);
+    }
+
+  });
+
+
+  console.log('送信データ:', selected);
+  console.log('型:', typeof selected);
+
+
+  if (selected.length === 0) {
+    alert('追加する空き枠を選択してください。');
+    return;
+  }
+
+
+  let message = `${selected.length}件をNotionへ登録しますか？`;
+  if (deleteExisting) {
+    message =
+      `既存のNotionデータをすべて削除してから\n\n` +
+      `${selected.length}件を登録します。\n\n` +
+      `よろしいですか？`;
+  }
+  if (!confirm(message)) {
+    return;
+  }
+
+  const button = document.getElementById('addButton');
+  const status = document.getElementById('status');
+
+
+  button.disabled = true;
+  button.textContent = 'Notionへ追加中...';
+
+  status.style.display = 'block';
+  status.textContent = '処理中です。しばらくお待ちください。';
+
+
+  google.script.run
+
+    .withSuccessHandler(msg => {
+
+      button.disabled = false;
+      button.textContent = '選択した空き枠をNotionに追加';
+
+      status.textContent =
+        '処理完了\n\n' + msg;
+
+    })
+
+    .withFailureHandler(error => {
+
+      button.disabled = false;
+      button.textContent = '選択した空き枠をNotionに追加';
+
+      status.textContent =
+        '処理失敗\n\n' + error.message;
+
+    })
+
+  .addSelectedToNotion(selected, deleteExisting);
+}
+</script>
+
+</body>
+</html>
