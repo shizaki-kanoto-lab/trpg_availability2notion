@@ -154,6 +154,32 @@
       border-left: 4px solid var(--accent);
     }
     #status.error { border-left-color: var(--danger); }
+    #status.result { white-space: normal; border-left-color: var(--ok); }
+    #status.result.partial { border-left-color: var(--danger); }
+    .result-title { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; font-size: 17px; font-weight: 700; }
+    .result-mark {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--ok-soft); color: var(--ok); font-size: 16px; flex: none;
+    }
+    .partial .result-mark { background: color-mix(in srgb, var(--danger) 15%, transparent); color: var(--danger); }
+    .result-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-bottom: 14px; }
+    .stat { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+    .stat strong { display: block; font-size: 22px; line-height: 1.2; font-variant-numeric: tabular-nums; }
+    .stat span { color: var(--muted); font-size: 12px; }
+    .stat.fail strong { color: var(--danger); }
+    .result-list { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0 0 14px; font-size: 14px; }
+    .result-list dt { color: var(--muted); }
+    .result-list dd { margin: 0; }
+    .result-list .warn { color: var(--danger); }
+    .failed-list { margin: 0 0 14px; padding-left: 20px; font-size: 13px; color: var(--danger); }
+    .failed-list li { margin-bottom: 4px; word-break: break-all; }
+    .open-link {
+      display: inline-block; text-decoration: none;
+      background: var(--accent); color: #fff; font-weight: 600;
+      padding: 9px 18px; border-radius: 8px;
+    }
+    .open-link:hover { background: var(--accent-hover); }
 
     .actionbar {
       position: fixed;
@@ -402,8 +428,94 @@ function renderDays() {
 
 function showStatus(text, isError) {
   status.style.display = 'block';
-  status.classList.toggle('error', Boolean(isError));
+  status.className = 'card' + (isError ? ' error' : '');
   status.textContent = text;
+}
+
+// 'yyyy-MM-dd' → 'M/D(曜)'
+function formatDay(date) {
+  const [y, m, d] = date.split('-').map(Number);
+  return `${m}/${d}(${WEEKDAYS[new Date(y, m - 1, d).getDay()]})`;
+}
+
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+const DISCORD_TEXT = {
+  sent: '通知しました',
+  already: '今日はすでに通知済みのため、送っていません（1日1回まで）',
+  off: '通知しない設定です',
+  not_configured: 'Webhook が未設定のため、送っていません',
+  skipped: '登録に失敗した日があるため、送っていません'
+};
+
+// 登録結果をカードで表示する
+function showResult(result) {
+  const succeeded = result.created + result.updated;
+  const partial = result.failed.length > 0;
+
+  status.textContent = '';
+  status.style.display = 'block';
+  status.className = 'card result' + (partial ? ' partial' : '');
+
+  const title = el('div', 'result-title');
+  title.append(
+    el('span', 'result-mark', partial ? '!' : '✓'),
+    el('span', '', partial
+      ? `${result.total}日のうち ${result.failed.length}日の登録に失敗しました`
+      : `Notionに ${succeeded}日分を登録しました`)
+  );
+  status.appendChild(title);
+
+  const stats = el('div', 'result-stats');
+  const stat = (count, label, cls) => {
+    const box = el('div', 'stat' + (cls ? ' ' + cls : ''));
+    box.append(el('strong', '', String(count)), el('span', '', label));
+    stats.appendChild(box);
+  };
+  stat(result.created, '新しく追加');
+  stat(result.updated, '内容を更新');
+  if (partial) stat(result.failed.length, '失敗', 'fail');
+  status.appendChild(stats);
+
+  const list = el('dl', 'result-list');
+  const item = (label, text, cls) => {
+    list.append(el('dt', '', label), el('dd', cls || '', text));
+  };
+  if (result.firstDate) {
+    item('期間', result.firstDate === result.lastDate
+      ? formatDay(result.firstDate)
+      : `${formatDay(result.firstDate)} 〜 ${formatDay(result.lastDate)}`);
+  }
+  if (result.deleteExisting) {
+    item('既存データ', `${result.deletedCount}件を削除してから登録しました`);
+  }
+  if (result.discord === 'error') {
+    item('Discord', '通知に失敗しました：' + result.discordError, 'warn');
+  } else {
+    item('Discord', DISCORD_TEXT[result.discord] || result.discord);
+  }
+  status.appendChild(list);
+
+  if (partial) {
+    const failedList = el('ul', 'failed-list');
+    result.failed.forEach(f => failedList.appendChild(el('li', '', `${formatDay(f.date)}：${f.message}`)));
+    status.appendChild(failedList);
+  }
+
+  if (/^https?:\/\//.test(result.publicUrl || '')) {
+    const link = el('a', 'open-link', '空き枠表を開く ↗');
+    link.href = result.publicUrl;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    status.appendChild(link);
+  }
+
+  status.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 function reload() {
@@ -466,15 +578,15 @@ function addToNotion() {
   showStatus('処理中です。しばらくお待ちください。');
 
   google.script.run
-    .withSuccessHandler(msg => {
+    .withSuccessHandler(result => {
       button.disabled = false;
       button.textContent = '選択した空き枠をNotionに追加';
-      showStatus('処理完了\n\n' + msg);
+      showResult(result);
     })
     .withFailureHandler(error => {
       button.disabled = false;
       button.textContent = '選択した空き枠をNotionに追加';
-      showStatus('処理失敗\n\n' + error.message, true);
+      showStatus('登録に失敗しました\n\n' + error.message, true);
     })
     .addSelectedToNotion(selected, deleteExisting, notifyDiscord);
 }

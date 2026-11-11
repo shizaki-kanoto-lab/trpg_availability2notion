@@ -343,8 +343,9 @@ function addSelectedToNotion(selectedDays, deleteExisting, notifyDiscord = true)
     }
   }
 
+  let deletedCount = 0;
   if (deleteExisting) {
-    archiveAllNotionPages();
+    deletedCount = archiveAllNotionPages();
   }
 
   // 対象期間の既存ページを1回で取得して日付ごとにまとめる
@@ -368,12 +369,15 @@ function addSelectedToNotion(selectedDays, deleteExisting, notifyDiscord = true)
 
   // 同じ日付なら先頭ページを更新して重複はアーカイブ、なければ作成
   const jobs = [];
+  const kindByDate = {};
   for (const day of selectedDays) {
     const pages = pagesByDate[day.date] || [];
     if (pages.length === 0) {
+      kindByDate[day.date] = 'created';
       jobs.push({ date: day.date, request: buildCreateRequest_(day) });
       continue;
     }
+    kindByDate[day.date] = 'updated';
     jobs.push({ date: day.date, request: buildUpdateRequest_(pages[0].id, day) });
     for (const duplicate of pages.slice(1)) {
       jobs.push({ date: day.date, request: buildArchiveRequest_(duplicate.id) });
@@ -385,24 +389,52 @@ function addSelectedToNotion(selectedDays, deleteExisting, notifyDiscord = true)
   const failedDates = {};
   responses.forEach((response, i) => {
     if (response.getResponseCode() !== 200) {
-      failedDates[jobs[i].date] = response.getContentText();
+      failedDates[jobs[i].date] = notionErrorMessage_(response);
     }
   });
 
-  const errors = Object.entries(failedDates).map(([date, message]) => `${date}: ${message}`);
-  const success = selectedDays.length - errors.length;
+  const failed = Object.entries(failedDates)
+    .map(([date, message]) => ({ date, message }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const succeededDates = selectedDays.map(day => day.date).filter(date => !failedDates[date]).sort();
 
-  if (errors.length > 0) {
-    return (
-      `${success}件成功\n` +
-      `${errors.length}件失敗\n\n` +
-      errors.join('\n')
-    );
+  // 画面で結果を見やすく表示するため、件数や通知の状況をまとめて返す
+  const result = {
+    total: selectedDays.length,
+    created: succeededDates.filter(date => kindByDate[date] === 'created').length,
+    updated: succeededDates.filter(date => kindByDate[date] === 'updated').length,
+    failed,
+    deletedCount,
+    deleteExisting: Boolean(deleteExisting),
+    firstDate: succeededDates[0] || '',
+    lastDate: succeededDates[succeededDates.length - 1] || '',
+    publicUrl: NOTION_PUBLIC_URL,
+    discord: 'off',
+    discordError: ''
+  };
+
+  if (failed.length > 0) {
+    result.discord = notifyDiscord ? 'skipped' : 'off';
+  } else if (notifyDiscord) {
+    try {
+      result.discord = sendDiscordUpdate(selectedDays);
+    } catch (e) {
+      result.discord = 'error';
+      result.discordError = e.message;
+    }
   }
-  if (notifyDiscord) {
-    sendDiscordUpdate(selectedDays);
+  return result;
+}
+
+// Notion のエラー応答から、人が読めるメッセージを取り出す
+function notionErrorMessage_(response) {
+  const text = response.getContentText();
+  try {
+    const body = JSON.parse(text);
+    return `HTTP ${response.getResponseCode()}: ${body.message || text}`;
+  } catch (e) {
+    return `HTTP ${response.getResponseCode()}: ${text}`;
   }
-  return `${success}件すべて追加しました。`;
 }
 
 function archiveAllNotionPages() {
@@ -413,13 +445,15 @@ function archiveAllNotionPages() {
     throw new Error(`${failed.length}件の削除に失敗しました: ${failed[0].getContentText()}`);
   }
   Logger.log(`既存ページを${pages.length}件削除しました`);
+  return pages.length;
 }
 
 // ===== Discord通知 =====
 // 同じ日に何度登録しても、通知は1日1回だけ（force=trueで強制送信）
+// 戻り値：'sent'（送った）/ 'already'（今日は通知済み）/ 'not_configured'（Webhook 未設定）
 function sendDiscordUpdate(selectedDays, force = false) {
   if (!DISCORD_WEBHOOK_URL || selectedDays.length === 0) {
-    return;
+    return 'not_configured';
   }
 
   const today = formatDate_(new Date());
@@ -427,7 +461,7 @@ function sendDiscordUpdate(selectedDays, force = false) {
 
   if (lastSent === today && !force) {
     Logger.log('Discord通知済みのためスキップ');
-    return;
+    return 'already';
   }
 
   // 登録した中で一番先の日付の月を「◯月まで」とする
@@ -446,6 +480,7 @@ function sendDiscordUpdate(selectedDays, force = false) {
   });
 
   PROPS.setProperty('LAST_DISCORD_UPDATE', today);
+  return 'sent';
 }
 
 // Discordに通知を1回送ってみる（1日1回の制限を無視して送信する）
