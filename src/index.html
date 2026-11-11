@@ -208,6 +208,13 @@
       <h2>オプション</h2>
       <div class="options">
         <label class="option">
+          <input type="checkbox" id="excludeMorningOnly">
+          <span>
+            朝だけOKの日を外す
+            <small>昼と夜がNGで、朝だけ空いている日のチェックを外します</small>
+          </span>
+        </label>
+        <label class="option">
           <input type="checkbox" id="deleteExisting">
           <span>
             Notionの既存データをすべて削除してから登録する
@@ -282,6 +289,25 @@ document.getElementById('checkAll').addEventListener('change', e => {
   updateSelection();
 });
 
+const excludeMorningOnlyInput = document.getElementById('excludeMorningOnly');
+excludeMorningOnlyInput.addEventListener('change', () => {
+  applyMorningOnlyRule();
+  updateSelection();
+});
+
+function isMorningOnly(day) {
+  return day.morning === 'OK' && day.afternoon === 'NG' && day.night === 'NG';
+}
+
+// 「朝だけOKの日を外す」の状態を、朝だけOKの日のチェックに反映する
+function applyMorningOnlyRule() {
+  dayCheckboxes().forEach(cb => {
+    if (isMorningOnly(availableDays[cb.dataset.index])) {
+      cb.checked = !excludeMorningOnlyInput.checked;
+    }
+  });
+}
+
 function dayCheckboxes() {
   return Array.from(document.querySelectorAll('input[data-index]'));
 }
@@ -344,6 +370,7 @@ function renderDays() {
       row.insertCell().appendChild(pill(value));
     });
   });
+  applyMorningOnlyRule();
   updateSelection();
 }
 
