@@ -1,72 +1,259 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
   <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: sans-serif; padding: 20px; }
-    table { border-collapse: collapse; width: 100%; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
-    th { background: #f5f5f5; }
-    button { padding: 10px 20px; font-size: 16px; }
-    #addButton { margin-top: 20px; }
+    :root {
+      --bg: #f5f6f8;
+      --surface: #ffffff;
+      --border: #e3e6eb;
+      --text: #1d2330;
+      --muted: #6b7280;
+      --accent: #4f46e5;
+      --accent-hover: #4338ca;
+      --accent-soft: #eef2ff;
+      --ok: #15803d;
+      --ok-soft: #dcfce7;
+      --ng: #9ca3af;
+      --ng-soft: #f3f4f6;
+      --sat: #2563eb;
+      --sun: #dc2626;
+      --danger: #b91c1c;
+      --shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 1px 3px rgba(16, 24, 40, .08);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f1115;
+        --surface: #181b22;
+        --border: #2a2f3a;
+        --text: #e6e8ec;
+        --muted: #9aa1ad;
+        --accent: #818cf8;
+        --accent-hover: #a5b4fc;
+        --accent-soft: #23264a;
+        --ok: #4ade80;
+        --ok-soft: #12321f;
+        --ng: #6b7280;
+        --ng-soft: #22262e;
+        --sat: #60a5fa;
+        --sun: #f87171;
+        --danger: #f87171;
+        --shadow: none;
+      }
+    }
 
-    .range { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 16px; }
-    .range input { font-size: 16px; padding: 4px; }
-    .range button { padding: 6px 16px; }
-    .hint { color: #666; font-size: 14px; }
-    .options p { margin: 8px 0; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", "Yu Gothic UI", sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+    .page { max-width: 880px; margin: 0 auto; padding: 32px 16px 120px; }
+
+    header { margin-bottom: 20px; }
+    h1 { margin: 0; font-size: 22px; letter-spacing: .02em; }
+    .lead { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .card h2 { margin: 0 0 12px; font-size: 13px; font-weight: 600; color: var(--muted); letter-spacing: .06em; }
+
+    .range { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    input[type="date"] {
+      font: inherit;
+      color: inherit;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 10px;
+    }
+    .hint { color: var(--muted); font-size: 13px; }
+
+    button {
+      font: inherit;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background .15s, border-color .15s, opacity .15s;
+    }
+    button:disabled { opacity: .5; cursor: default; }
+    .secondary {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 7px 16px;
+    }
+    .secondary:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+    .primary {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 12px 24px;
+    }
+    .primary:hover:not(:disabled) { background: var(--accent-hover); }
+
+    .options { display: grid; gap: 10px; }
+    .option { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
+    .option input { margin-top: 5px; accent-color: var(--accent); }
+    .option small { display: block; color: var(--muted); font-size: 13px; }
+    .option.disabled { cursor: default; opacity: .6; }
+
+    .table-card { padding: 0; overflow: hidden; }
+    .table-head { display: flex; justify-content: space-between; align-items: baseline; padding: 16px 20px 8px; }
+    .table-head h2 { margin: 0; }
+    .scroll { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 10px 12px; text-align: center; white-space: nowrap; }
+    th { font-size: 12px; font-weight: 600; color: var(--muted); border-bottom: 1px solid var(--border); }
+    td { border-bottom: 1px solid var(--border); }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: var(--accent-soft); }
+    tbody tr.off td { opacity: .45; }
+    td.date { text-align: left; font-variant-numeric: tabular-nums; }
+    th.date { text-align: left; }
+    .dow { margin-left: 6px; font-size: 13px; color: var(--muted); }
+    .dow.sat { color: var(--sat); }
+    .dow.sun { color: var(--sun); }
+    input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+
+    .pill {
+      display: inline-block;
+      min-width: 40px;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .04em;
+    }
+    .pill.ok { background: var(--ok-soft); color: var(--ok); }
+    .pill.ng { background: var(--ng-soft); color: var(--ng); }
+    .empty { padding: 32px; text-align: center; color: var(--muted); }
 
     #status {
-      margin-top: 20px;
-      padding: 10px;
-      white-space: pre-wrap;
-      border: 1px solid #ccc;
       display: none;
+      white-space: pre-wrap;
+      font-size: 14px;
+      border-left: 4px solid var(--accent);
+    }
+    #status.error { border-left-color: var(--danger); }
+
+    .actionbar {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--surface);
+      background: color-mix(in srgb, var(--surface) 92%, transparent);
+      backdrop-filter: blur(8px);
+      border-top: 1px solid var(--border);
+    }
+    .actionbar-inner {
+      max-width: 880px;
+      margin: 0 auto;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    #selectedCount { color: var(--muted); font-size: 14px; }
+    #selectedCount strong { color: var(--text); font-size: 18px; }
+
+    @media (max-width: 560px) {
+      .page { padding-top: 20px; }
+      h1 { font-size: 19px; }
+      .card { padding: 16px; }
+      .table-card { padding: 0; }
+      .table-head { padding: 14px 16px 6px; }
+      th, td { padding: 8px 4px; }
+      th:first-child, td:first-child { padding-left: 16px; }
+      th:last-child, td:last-child { padding-right: 16px; }
+      .year { display: none; }
+      .dow { margin-left: 2px; }
+      .pill { min-width: 34px; padding: 2px 6px; }
+      .primary { padding: 12px 16px; }
     }
   </style>
 </head>
 <body>
-  <h1>空き枠をNotionに追加するツール</h1>
+  <div class="page">
+    <header>
+      <h1>空き枠をNotionに追加するツール</h1>
+      <p class="lead">カレンダーの予定から判定した空き枠です。Notionに載せたい日を選んで追加してください。</p>
+    </header>
 
-  <div class="range">
-    <label>取得期間 <input type="date" id="startDate"></label>
-    <span>〜</span>
-    <label><input type="date" id="endDate"></label>
-    <button id="reloadButton" onclick="reload()">再判定</button>
-    <span class="hint" id="rangeHint"></span>
+    <section class="card">
+      <h2>取得期間</h2>
+      <div class="range">
+        <input type="date" id="startDate" aria-label="開始日">
+        <span>〜</span>
+        <input type="date" id="endDate" aria-label="終了日">
+        <button class="secondary" id="reloadButton" onclick="reload()">再判定</button>
+        <span class="hint" id="rangeHint"></span>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>オプション</h2>
+      <div class="options">
+        <label class="option">
+          <input type="checkbox" id="deleteExisting">
+          <span>
+            Notionの既存データをすべて削除してから登録する
+            <small>過去の日付も含めて、表をまるごと作り直します</small>
+          </span>
+        </label>
+        <label class="option" id="notifyOption">
+          <input type="checkbox" id="notifyDiscord">
+          <span>
+            Discordに通知する
+            <small id="notifyHint">登録後に「◯月まで最新化しました」と投稿します（1日1回まで）</small>
+          </span>
+        </label>
+      </div>
+    </section>
+
+    <section class="card table-card">
+      <div class="table-head">
+        <h2>空き枠</h2>
+        <span class="hint" id="dayCount"></span>
+      </div>
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr>
+              <th><input type="checkbox" id="checkAll" checked title="すべて選択" aria-label="すべて選択"></th>
+              <th class="date">日付</th>
+              <th>朝</th>
+              <th>昼</th>
+              <th>夜</th>
+            </tr>
+          </thead>
+          <tbody id="days"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card" id="status" role="status"></section>
   </div>
 
-  <div class="options">
-    <p>
-      <label>
-        <input type="checkbox" id="deleteExisting">
-        Notionの既存データをすべて削除してから登録する
-      </label>
-    </p>
-    <p>
-      <label>
-        <input type="checkbox" id="notifyDiscord">
-        Discordに通知する
-      </label>
-      <span class="hint" id="notifyHint"></span>
-    </p>
+  <div class="actionbar">
+    <div class="actionbar-inner">
+      <span id="selectedCount"></span>
+      <button class="primary" id="addButton" onclick="addToNotion()">選択した空き枠をNotionに追加</button>
+    </div>
   </div>
-
-  <table>
-    <thead>
-      <tr>
-        <th><input type="checkbox" id="checkAll" checked title="すべて選択"></th>
-        <th>日付</th>
-        <th>朝</th>
-        <th>昼</th>
-        <th>夜</th>
-      </tr>
-    </thead>
-    <tbody id="days"></tbody>
-  </table>
-
-<button id="addButton" onclick="addToNotion()">選択した空き枠をNotionに追加</button>
-<div id="status"></div>
 
 <script>
 const initial = <?!= JSON.stringify(initial) ?>;
@@ -76,6 +263,7 @@ const startInput = document.getElementById('startDate');
 const endInput = document.getElementById('endDate');
 const notifyInput = document.getElementById('notifyDiscord');
 const status = document.getElementById('status');
+const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
 
 startInput.value = initial.start;
 endInput.value = initial.end;
@@ -85,41 +273,83 @@ if (initial.canNotify) {
   notifyInput.checked = true;
 } else {
   notifyInput.disabled = true;
-  document.getElementById('notifyHint').textContent = '（DISCORD_WEBHOOK_URL が未設定のため通知できません）';
+  document.getElementById('notifyOption').classList.add('disabled');
+  document.getElementById('notifyHint').textContent = 'DISCORD_WEBHOOK_URL が未設定のため通知できません';
 }
 
 document.getElementById('checkAll').addEventListener('change', e => {
   document.querySelectorAll('input[data-index]').forEach(cb => { cb.checked = e.target.checked; });
+  updateSelection();
 });
+
+function dayCheckboxes() {
+  return Array.from(document.querySelectorAll('input[data-index]'));
+}
+
+function updateSelection() {
+  const boxes = dayCheckboxes();
+  const checked = boxes.filter(cb => cb.checked).length;
+  boxes.forEach(cb => cb.closest('tr').classList.toggle('off', !cb.checked));
+  document.getElementById('checkAll').checked = boxes.length > 0 && checked === boxes.length;
+  document.getElementById('selectedCount').innerHTML = `<strong>${checked}</strong> 日を選択中`;
+  document.getElementById('addButton').disabled = checked === 0;
+}
+
+function pill(value) {
+  const span = document.createElement('span');
+  span.className = 'pill ' + (value === 'OK' ? 'ok' : 'ng');
+  span.textContent = value;
+  return span;
+}
 
 function renderDays() {
   const tbody = document.getElementById('days');
   tbody.textContent = '';
+  document.getElementById('dayCount').textContent = `${availableDays.length}日`;
 
   if (availableDays.length === 0) {
     const row = tbody.insertRow();
     const cell = row.insertCell();
     cell.colSpan = 5;
+    cell.className = 'empty';
     cell.textContent = 'この期間に空き枠はありません。';
+    updateSelection();
     return;
   }
 
   availableDays.forEach((day, i) => {
     const row = tbody.insertRow();
+
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
     checkbox.checked = true;
     checkbox.dataset.index = i;
+    checkbox.addEventListener('change', updateSelection);
     row.insertCell().appendChild(checkbox);
-    [day.displayDate, day.morning, day.afternoon, day.night].forEach(text => {
-      row.insertCell().textContent = text;
+
+    const dateCell = row.insertCell();
+    dateCell.className = 'date';
+    const [y, m, d] = day.date.split('-').map(Number);
+    const year = document.createElement('span');
+    year.className = 'year';
+    year.textContent = `${y}/`;
+    dateCell.append(year, `${String(m).padStart(2, '0')}/${String(d).padStart(2, '0')}`);
+    const weekday = new Date(y, m - 1, d).getDay();
+    const dow = document.createElement('span');
+    dow.className = 'dow' + (weekday === 6 ? ' sat' : weekday === 0 ? ' sun' : '');
+    dow.textContent = `(${WEEKDAYS[weekday]})`;
+    dateCell.appendChild(dow);
+
+    [day.morning, day.afternoon, day.night].forEach(value => {
+      row.insertCell().appendChild(pill(value));
     });
   });
-  document.getElementById('checkAll').checked = true;
+  updateSelection();
 }
 
-function showStatus(text) {
+function showStatus(text, isError) {
   status.style.display = 'block';
+  status.classList.toggle('error', Boolean(isError));
   status.textContent = text;
 }
 
@@ -142,7 +372,7 @@ function reload() {
     })
     .withFailureHandler(error => {
       button.disabled = false;
-      showStatus('判定に失敗しました\n\n' + error.message);
+      showStatus('判定に失敗しました\n\n' + error.message, true);
     })
     .getAvailableDays(startInput.value, endInput.value);
 }
@@ -153,7 +383,7 @@ function addToNotion() {
   const deleteExisting = document.getElementById('deleteExisting').checked;
   const notifyDiscord = notifyInput.checked;
 
-  document.querySelectorAll('input[data-index]').forEach(cb => {
+  dayCheckboxes().forEach(cb => {
     if (cb.checked) {
       selected.push(availableDays[Number(cb.dataset.index)]);
     }
@@ -191,7 +421,7 @@ function addToNotion() {
     .withFailureHandler(error => {
       button.disabled = false;
       button.textContent = '選択した空き枠をNotionに追加';
-      showStatus('処理失敗\n\n' + error.message);
+      showStatus('処理失敗\n\n' + error.message, true);
     })
     .addSelectedToNotion(selected, deleteExisting, notifyDiscord);
 }

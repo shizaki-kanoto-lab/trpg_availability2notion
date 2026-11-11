@@ -79,7 +79,8 @@ function doGet() {
   };
 
   return template.evaluate()
-    .setTitle('空き枠をNotionに追加するツール');
+    .setTitle('空き枠をNotionに追加するツール')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
 function formatDate_(date) {
