@@ -55,7 +55,8 @@
     }
     .page { max-width: 880px; margin: 0 auto; padding: 32px 16px 120px; }
 
-    header { margin-bottom: 20px; }
+    header { margin-bottom: 20px; display: flex; align-items: center; gap: 14px; }
+    .app-icon { width: 52px; height: 52px; border-radius: 12px; flex: none; }
     h1 { margin: 0; font-size: 22px; letter-spacing: .02em; }
     .lead { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
 
@@ -206,6 +207,7 @@
     @media (max-width: 560px) {
       .page { padding-top: 20px; }
       h1 { font-size: 19px; }
+      .app-icon { width: 40px; height: 40px; border-radius: 10px; }
       .card { padding: 16px; }
       .table-card { padding: 0; }
       .table-head { padding: 14px 16px 6px; }
@@ -222,8 +224,11 @@
 <body>
   <div class="page">
     <header>
-      <h1>空き枠をNotionに追加するツール</h1>
-      <p class="lead">カレンダーの予定から判定した空き枠です。Notionに載せたい日を選んで追加してください。</p>
+      <img class="app-icon" id="appIcon" alt="" width="52" height="52" hidden>
+      <div>
+        <h1>空き枠をNotionに追加するツール</h1>
+        <p class="lead">カレンダーの予定から判定した空き枠です。Notionに載せたい日を選んで追加してください。</p>
+      </div>
     </header>
 
     <section class="card">
@@ -304,6 +309,12 @@ const endInput = document.getElementById('endDate');
 const notifyInput = document.getElementById('notifyDiscord');
 const status = document.getElementById('status');
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
+
+if (initial.iconUrl) {
+  const appIcon = document.getElementById('appIcon');
+  appIcon.addEventListener('load', () => { appIcon.hidden = false; });
+  appIcon.src = initial.iconUrl;
+}
 
 startInput.value = initial.start;
 endInput.value = initial.end;

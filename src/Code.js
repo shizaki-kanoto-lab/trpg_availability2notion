@@ -76,6 +76,7 @@ function doGet() {
     end: range.end,
     maxDays: MAX_RANGE_DAYS,
     canNotify: Boolean(DISCORD_WEBHOOK_URL),
+    iconUrl: FAVICON_URL,
     availableDays: getAvailableDays(range.start, range.end)
   };
 
