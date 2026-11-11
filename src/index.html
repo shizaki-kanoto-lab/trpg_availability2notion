@@ -135,9 +135,16 @@
       font-size: 12px;
       font-weight: 700;
       letter-spacing: .04em;
+      line-height: 1.5;
+      border: 1px solid transparent;
+      border-radius: 999px;
     }
     .pill.ok { background: var(--ok-soft); color: var(--ok); }
     .pill.ng { background: var(--ng-soft); color: var(--ng); }
+    .pill:hover { border-color: currentColor; }
+    .pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .pill.changed { border: 1px dashed currentColor; }
+    .pill.changed::after { content: '*'; margin-left: 1px; }
     .empty { padding: 32px; text-align: center; color: var(--muted); }
 
     #status {
@@ -234,7 +241,7 @@
     <section class="card table-card">
       <div class="table-head">
         <h2>空き枠</h2>
-        <span class="hint" id="dayCount"></span>
+        <span class="hint"><span id="dayCount"></span> ・ OK / NG を押すと切り替えられます</span>
       </div>
       <div class="scroll">
         <table>
@@ -321,14 +328,33 @@ function updateSelection() {
   document.getElementById('addButton').disabled = checked === 0;
 }
 
-function pill(value) {
-  const span = document.createElement('span');
-  span.className = 'pill ' + (value === 'OK' ? 'ok' : 'ng');
-  span.textContent = value;
-  return span;
+const SLOT_KEYS = ['morning', 'afternoon', 'night'];
+const SLOT_LABELS = { morning: '朝', afternoon: '昼', night: '夜' };
+let originalDays = [];
+
+// OK / NG のボタン。押すと切り替わり、判定結果から変えたものは点線で示す
+function pill(index, key) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  const paint = () => {
+    const value = availableDays[index][key];
+    const changed = value !== originalDays[index][key];
+    button.className = 'pill ' + (value === 'OK' ? 'ok' : 'ng') + (changed ? ' changed' : '');
+    button.textContent = value;
+    button.title = changed ? '手動で変更しました（押すと切り替え）' : '押すと切り替え';
+    button.setAttribute('aria-label', `${availableDays[index].date} ${SLOT_LABELS[key]}：${value}${changed ? '（変更済み）' : ''}`);
+  };
+  button.addEventListener('click', () => {
+    const day = availableDays[index];
+    day[key] = day[key] === 'OK' ? 'NG' : 'OK';
+    paint();
+  });
+  paint();
+  return button;
 }
 
 function renderDays() {
+  originalDays = availableDays.map(day => ({ ...day }));
   const tbody = document.getElementById('days');
   tbody.textContent = '';
   document.getElementById('dayCount').textContent = `${availableDays.length}日`;
@@ -366,8 +392,8 @@ function renderDays() {
     dow.textContent = `(${WEEKDAYS[weekday]})`;
     dateCell.appendChild(dow);
 
-    [day.morning, day.afternoon, day.night].forEach(value => {
-      row.insertCell().appendChild(pill(value));
+    SLOT_KEYS.forEach(key => {
+      row.insertCell().appendChild(pill(i, key));
     });
   });
   applyMorningOnlyRule();

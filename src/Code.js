@@ -335,6 +335,12 @@ function addSelectedToNotion(selectedDays, deleteExisting, notifyDiscord = true)
     if (!day.date && day.displayDate) {
       day.date = day.displayDate.replace(/\//g, '-');
     }
+    // 画面で OK / NG を切り替えられるので、値を確かめておく
+    for (const key of ['morning', 'afternoon', 'night']) {
+      if (day[key] !== 'OK' && day[key] !== 'NG') {
+        throw new Error(`${day.date} の ${key} の値が不正です: ${day[key]}`);
+      }
+    }
   }
 
   if (deleteExisting) {
