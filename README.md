@@ -48,6 +48,8 @@ flowchart LR
 
 ## Notion データベースの形式
 
+[空き枠表のテンプレート](https://ivory-wednesday-73f.notion.site/Notion-4151b663c48f817cb125fc3b5ff2ffac)を複製すれば、この形式のデータベースがそのまま使えます。
+
 | プロパティ名 | 種類 | 内容 |
 | --- | --- | --- |
 | 名前 | タイトル | 「セッション可能」が入る |
@@ -66,14 +68,14 @@ PL さんに見せるときは、Notion の「共有」>「公開」でデータ
 
 1. Apps Script プロジェクトを作り、`src/` の3ファイル（`Code.js`、`index.html`、`appsscript.json`）を配置する
    （[clasp](https://github.com/google/clasp) を使う場合は `.clasp.json` の `rootDir` を `src` にして `clasp push`）
-2. Notion で上の形式のデータベースを作る
+2. Notion で[空き枠表のテンプレート](https://ivory-wednesday-73f.notion.site/Notion-4151b663c48f817cb125fc3b5ff2ffac)を開き、右上の「複製」から自分のワークスペースにコピーする（自分で作る場合は上の形式で）
 3. Notion で[インテグレーション](https://www.notion.so/my-integrations)を作成し、データベースに接続（コネクト）する
 4. 「プロジェクトの設定」>「スクリプト プロパティ」に以下を登録する
 
    | キー | 必須 | 内容 |
    | --- | --- | --- |
    | `NOTION_TOKEN` | ○ | Notion インテグレーションのシークレット |
-   | `NOTION_DATABASE_ID` | ○ | データベース ID |
+   | `NOTION_DATABASE_ID` | ○ | データベース ID（「空き枠表」のデータベースを開いたときの URL に含まれる32桁の英数字） |
    | `DISCORD_WEBHOOK_URL` | | 通知先チャンネルの Webhook URL（未設定なら通知しない） |
    | `NOTION_PUBLIC_URL` | | 通知に載せる空き枠表の URL |
    | `EXCLUDE_CALENDARS` | | 判定から除外するカレンダー名（カンマ区切り。例：`routine work,healthcare`） |
