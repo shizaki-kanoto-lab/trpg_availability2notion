@@ -1,5 +1,7 @@
 # 空き枠をNotionに追加するツール
 
+![空き枠をNotionに追加するツール](assets/banner.png)
+
 Google カレンダーの予定から TRPG セッションの空き枠（朝・昼・夜）を判定し、Notion の空き枠表に登録する Google Apps Script です。
 登録すると Discord に「◯月まで最新化しました」と通知します。
 

@@ -53,6 +53,7 @@ const NOTION_PROPERTY = {
   night: '夜',        // セレクト（OK / NG）
   note: '備考'        // テキスト
 };
+const FAVICON_URL = 'https://raw.githubusercontent.com/shizaki-kanoto-lab/trpg_availability2notion/main/assets/icon.png';
 const NOTION_PAGE_TITLE = 'セッション可能';
 
 const NOTION_API = 'https://api.notion.com/v1';
@@ -80,7 +81,8 @@ function doGet() {
 
   return template.evaluate()
     .setTitle('空き枠をNotionに追加するツール')
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+    .setFaviconUrl(FAVICON_URL);
 }
 
 function formatDate_(date) {
