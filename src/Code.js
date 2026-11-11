@@ -53,7 +53,7 @@ const NOTION_PROPERTY = {
   night: '夜',        // セレクト（OK / NG）
   note: '備考'        // テキスト
 };
-const FAVICON_URL = 'https://raw.githubusercontent.com/shizaki-kanoto-lab/trpg_availability2notion/main/assets/icon.png';
+const FAVICON_URL = 'https://raw.githubusercontent.com/shizaki-kanoto-lab/trpg_availability2notion/main/assets/favicon.png';
 const NOTION_PAGE_TITLE = 'セッション可能';
 
 const NOTION_API = 'https://api.notion.com/v1';
