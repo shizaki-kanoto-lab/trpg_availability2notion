@@ -110,6 +110,9 @@
     .slots th, .slots td { padding: 8px 12px; border-bottom: 1px solid var(--border); text-align: left; }
     .slots th { font-size: .85rem; color: var(--muted); font-weight: 600; }
 
+    .shot { margin: 0 auto; max-width: 560px; }
+    .shot img { display: block; width: 100%; height: auto; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 14px 34px -22px rgba(0, 0, 0, .55); }
+    .shot figcaption { margin-top: 10px; font-size: .9rem; color: var(--muted); }
     ul.check { list-style: none; padding: 0; margin: 0; }
     ul.check li { padding-left: 1.6em; position: relative; margin: 6px 0; }
     ul.check li::before { content: "✓"; position: absolute; left: 0; color: var(--accent-ink); font-weight: 700; }
@@ -186,6 +189,16 @@
           </li>
         </ol>
         <div class="tip">自動で毎日書き換えるのではなく、<strong>判定結果を自分の目で確かめてから登録する</strong>作りです。カレンダーに入れていない予定がある日は、チェックを外して登録しないようにできます。</div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <h2>実際の画面</h2>
+        <figure class="shot">
+          <img src="screen.jpg" alt="空き枠をNotionに追加するツールの画面。取得期間とオプションの下に、日付ごとの朝・昼・夜の OK / NG が並び、下に「選択した空き枠をNotionに追加」ボタンがある" width="880" height="963" loading="lazy">
+          <figcaption>Web アプリを開いたところ。判定結果を確かめて、登録したい日にチェックを付けてから「選択した空き枠をNotionに追加」を押します。</figcaption>
+        </figure>
       </div>
     </section>
 
