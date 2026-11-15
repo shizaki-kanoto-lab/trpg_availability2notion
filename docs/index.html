@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>空き枠をNotionに追加するツール</title>
+  <meta name="description" content="Googleカレンダーの予定からTRPGセッションの空き枠（朝・昼・夜）を判定し、確認してからNotionの空き枠表に登録する無料ツールです。">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="空き枠をNotionに追加するツール">
+  <meta property="og:description" content="GMの空き日程を、Notionで公開する。カレンダーから朝・昼・夜の空き枠を判定して、Notionの空き枠表に登録します。">
+  <meta property="og:url" content="https://shizaki-kanoto.is-a.dev/trpg_availability2notion/">
+  <meta property="og:image" content="https://shizaki-kanoto.is-a.dev/trpg_availability2notion/ogp.jpg">
+  <meta property="og:image:width" content="1280">
+  <meta property="og:image:height" content="669">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <style>
+    :root {
+      --bg: #f5f6f9;
+      --surface: #ffffff;
+      --text: #1b1f3b;
+      --muted: #555b74;
+      --border: #e1e4ee;
+      --primary: #4338ca;   /* ボタン・リンク（白文字が読める濃さのインディゴ） */
+      --primary-text: #ffffff;
+      --indigo: #4f46e5;    /* 線や飾り */
+      --accent: #16a34a;    /* 線や飾り */
+      --accent-ink: #15803d; /* チェックマーク（背景上で見える濃さの緑） */
+      --tip-bg: #ecf8ef;
+      --ok: #15803d;
+      --ok-soft: #dcfce7;
+      --ng: #6b7280;
+      --ng-soft: #eef0f3;
+      --sat: #2563eb;
+      --sun: #dc2626;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #11121c;
+        --surface: #1a1c2b;
+        --text: #e8e9f3;
+        --muted: #a7abc2;
+        --border: #2c2f45;
+        --primary: #a5b4fc;
+        --primary-text: #11121c;
+        --indigo: #818cf8;
+        --accent: #4ade80;
+        --accent-ink: #4ade80;
+        --tip-bg: #17291e;
+        --ok: #4ade80;
+        --ok-soft: #12321f;
+        --ng: #8b91a3;
+        --ng-soft: #23263a;
+        --sat: #60a5fa;
+        --sun: #f87171;
+      }
+    }
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", "Yu Gothic UI", sans-serif;
+      line-height: 1.8;
+    }
+    a { color: var(--primary); }
+    code { font-size: .92em; padding: 1px 6px; border-radius: 6px; background: var(--tip-bg); }
+    .wrap { max-width: 880px; margin: 0 auto; padding: 0 16px; }
+
+    header.hero { padding: 56px 0 36px; }
+    .hero-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: center; }
+    .hero h1 { font-size: clamp(1.6rem, 4.5vw, 2.2rem); line-height: 1.35; margin: 0 0 14px; }
+    .hero .lead { font-size: 1.08rem; color: var(--muted); margin: 0; }
+    .buttons { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
+    .btn { display: inline-block; padding: 12px 22px; border-radius: 10px; font-weight: 700; text-decoration: none; border: 2px solid var(--primary); }
+    .btn.primary { background: var(--primary); color: var(--primary-text); }
+    .btn.secondary { color: var(--primary); }
+
+    /* 空き枠表のイメージ */
+    .table-demo { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; font-size: .92rem; line-height: 1.5; box-shadow: 0 10px 30px -18px rgba(67, 56, 202, .45); }
+    .table-demo .cap { display: flex; align-items: center; gap: 8px; font-weight: 700; margin-bottom: 10px; }
+    .table-demo .cap span { font-size: 1.1rem; }
+    .table-demo table { width: 100%; border-collapse: collapse; }
+    .table-demo th, .table-demo td { padding: 7px 6px; text-align: center; border-top: 1px solid var(--border); }
+    .table-demo thead th { border-top: 0; font-size: .8rem; color: var(--muted); font-weight: 600; }
+    .table-demo td.date { text-align: left; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .table-demo .sat { color: var(--sat); }
+    .table-demo .sun { color: var(--sun); }
+    .pill { display: inline-block; min-width: 3em; padding: 1px 8px; border-radius: 999px; font-size: .78rem; font-weight: 700; }
+    .pill.ok { background: var(--ok-soft); color: var(--ok); }
+    .pill.ng { background: var(--ng-soft); color: var(--ng); }
+    .table-demo .note { margin-top: 10px; font-size: .8rem; color: var(--muted); }
+
+    section { padding: 36px 0; border-top: 1px solid var(--border); }
+    h2 { font-size: 1.45rem; margin: 0 0 18px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; }
+    .card h3 { font-size: 1.05rem; margin: 0 0 6px; }
+    .card p { margin: 0; color: var(--muted); }
+
+    .flow { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; counter-reset: step; }
+    .flow li { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; counter-increment: step; }
+    .flow li::before { content: counter(step); display: inline-grid; place-items: center; width: 1.7em; height: 1.7em; border-radius: 50%; background: var(--indigo); color: #fff; font-weight: 700; font-size: .85rem; margin-bottom: 6px; }
+    .flow h3 { font-size: 1rem; margin: 0 0 4px; }
+    .flow p { margin: 0; color: var(--muted); font-size: .94rem; }
+
+    .slots { width: 100%; max-width: 420px; border-collapse: collapse; margin-bottom: 14px; }
+    .slots th, .slots td { padding: 8px 12px; border-bottom: 1px solid var(--border); text-align: left; }
+    .slots th { font-size: .85rem; color: var(--muted); font-weight: 600; }
+
+    ul.check { list-style: none; padding: 0; margin: 0; }
+    ul.check li { padding-left: 1.6em; position: relative; margin: 6px 0; }
+    ul.check li::before { content: "✓"; position: absolute; left: 0; color: var(--accent-ink); font-weight: 700; }
+
+    ol.setup { margin: 0; padding-left: 1.4em; }
+    ol.setup li { margin: 6px 0; }
+    .tip { background: var(--tip-bg); border-radius: 12px; padding: 14px 18px; margin-top: 18px; }
+
+    /* フッター（https://shizaki-kanoto.is-a.dev/kedamono-cs-copy/ に合わせる） */
+    footer {
+      position: relative; margin-top: 40px; padding: 24px 0 max(32px, env(safe-area-inset-bottom));
+      text-align: center; font-size: .8rem; line-height: 1.8; color: var(--muted);
+    }
+    footer::before {
+      content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), var(--indigo), var(--accent), transparent);
+      opacity: .7;
+    }
+    footer p { margin: 0 0 8px; }
+    footer .copyright { margin: 28px 0 0; font-size: .75rem; letter-spacing: .05em; }
+    footer .foot-logo { display: inline-block; margin-top: 12px; opacity: .85; transition: opacity .2s; }
+    footer .foot-logo:hover { opacity: 1; }
+    footer .foot-logo img { display: block; width: 48px; height: 48px; }
+
+    @media (max-width: 720px) {
+      .hero-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <h1>空き枠を<br>Notionに追加するツール</h1>
+        <p class="lead">Google カレンダーの予定から、TRPG セッションの空き枠（朝・昼・夜）を判定して、Notion の空き枠表に登録します。PL さんには、Web 公開した空き枠表を見てもらうだけ。無料で使えるツールです。</p>
+        <div class="buttons">
+          <a class="btn primary" href="https://github.com/shizaki-kanoto-lab/trpg_availability2notion#セットアップ">使い方を見る</a>
+          <a class="btn secondary" href="https://github.com/shizaki-kanoto-lab/trpg_availability2notion">GitHub で見る</a>
+        </div>
+      </div>
+
+      <div class="table-demo" role="img" aria-label="Notion に登録される空き枠表の例。日付ごとに朝・昼・夜の OK と NG が並ぶ">
+        <div class="cap"><span>🗓️</span>セッション可能な日</div>
+        <table>
+          <thead><tr><th scope="col">日付</th><th scope="col">朝</th><th scope="col">昼</th><th scope="col">夜</th></tr></thead>
+          <tbody>
+            <tr><td class="date">12/5（金）</td><td><span class="pill ng">NG</span></td><td><span class="pill ng">NG</span></td><td><span class="pill ok">OK</span></td></tr>
+            <tr><td class="date sat">12/6（土）</td><td><span class="pill ok">OK</span></td><td><span class="pill ok">OK</span></td><td><span class="pill ng">NG</span></td></tr>
+            <tr><td class="date sun">12/7（日）</td><td><span class="pill ng">NG</span></td><td><span class="pill ok">OK</span></td><td><span class="pill ok">OK</span></td></tr>
+            <tr><td class="date">12/10（水）</td><td><span class="pill ng">NG</span></td><td><span class="pill ng">NG</span></td><td><span class="pill ok">OK</span></td></tr>
+          </tbody>
+        </table>
+        <div class="note">登録したら Discord に「12月まで最新化しました」と通知</div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section>
+      <div class="wrap">
+        <h2>しくみ</h2>
+        <ol class="flow">
+          <li>
+            <h3>空き枠を判定</h3>
+            <p>Web アプリを開くと、カレンダーの予定から各日の朝・昼・夜が空いているかを判定します。</p>
+          </li>
+          <li>
+            <h3>確認して登録</h3>
+            <p>判定結果の表を見て、登録したい日を選んでボタンを押すと Notion に登録されます。</p>
+          </li>
+          <li>
+            <h3>Discord に通知</h3>
+            <p>登録が終わると、空き枠表の URL を添えて Discord にお知らせします（任意）。</p>
+          </li>
+        </ol>
+        <div class="tip">自動で毎日書き換えるのではなく、<strong>判定結果を自分の目で確かめてから登録する</strong>作りです。カレンダーに入れていない予定がある日は、チェックを外して登録しないようにできます。</div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <h2>できること</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>朝・昼・夜で判定</h3>
+            <p>時間帯ごとに、予定が少しでも重なれば NG、空いていれば OK にします。</p>
+          </div>
+          <div class="card">
+            <h3>手で直してから登録</h3>
+            <p>OK / NG は押すだけで切り替わります。直したところは印が付くので分かります。</p>
+          </div>
+          <div class="card">
+            <h3>メモは残したまま更新</h3>
+            <p>同じ日付のページがあれば朝・昼・夜だけを書き換えるので、備考のメモは消えません。</p>
+          </div>
+          <div class="card">
+            <h3>通知は1日1回</h3>
+            <p>同じ日に何度登録し直しても、Discord への通知は1回だけです。</p>
+          </div>
+          <div class="card">
+            <h3>前日の夜を空けない</h3>
+            <p>特定の予定がある日の前夜を NG にできます（例：仕事の大事な日の前の夜）（任意）。</p>
+          </div>
+          <div class="card">
+            <h3>テンプレートを用意</h3>
+            <p>空き枠表の Notion テンプレートを複製すれば、すぐに使い始められます。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <h2>判定のルール</h2>
+        <table class="slots">
+          <thead><tr><th scope="col">時間帯</th><th scope="col">判定する時刻</th></tr></thead>
+          <tbody>
+            <tr><td>朝</td><td>9:00〜12:00</td></tr>
+            <tr><td>昼</td><td>13:00〜19:00</td></tr>
+            <tr><td>夜</td><td>21:00〜24:00</td></tr>
+          </tbody>
+        </table>
+        <ul class="check">
+          <li>終日の予定がある日は、朝・昼・夜すべて NG にします。</li>
+          <li>朝・昼・夜すべて NG の日は、一覧に出しません。</li>
+          <li>判定に使うのは自分が所有しているカレンダーだけです（祝日カレンダーなどは対象外）。決めたカレンダーを外すこともできます。</li>
+        </ul>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <h2>必要なもの</h2>
+        <ul class="check">
+          <li>Google アカウント（予定を入れているカレンダー）</li>
+          <li>Notion アカウント（空き枠表を置くワークスペース）</li>
+          <li>通知先の Discord サーバー（任意。Webhook を作れる権限が必要です）</li>
+        </ul>
+        <p>どれも無料で使えます。コードを書く必要はなく、ファイルを Google Apps Script に置いて設定するだけです。</p>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <h2>安全性について</h2>
+        <ul class="check">
+          <li>Notion のシークレットや Discord の Webhook URL は、自分の Apps Script の中にだけ保存します。作者を含め、ほかの人には送られません。</li>
+          <li>Web アプリは「自分のみ」がアクセスできる設定で公開します。カレンダーを読めるのは自分だけです。</li>
+          <li>Notion に書き込むのは、日付と朝・昼・夜の OK / NG だけです。予定のタイトルや中身は書き込みません。</li>
+        </ul>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <h2>はじめかた</h2>
+        <ol class="setup">
+          <li>Google Apps Script で新しいプロジェクトを作り、<code>src/</code> の3つのファイルを置く</li>
+          <li><a href="https://ivory-wednesday-73f.notion.site/Notion-4151b663c48f817cb125fc3b5ff2ffac">空き枠表のテンプレート</a>を、自分の Notion に複製する</li>
+          <li>Notion でインテグレーションを作り、空き枠表に接続する</li>
+          <li>スクリプト プロパティに、Notion のシークレットとデータベース ID を登録する（Discord に通知するなら Webhook URL も）</li>
+          <li><code>checkConfig</code> を実行して、設定を確かめる</li>
+          <li>「自分のみ」がアクセスできる Web アプリとしてデプロイし、開いた画面から登録する</li>
+        </ol>
+        <div class="tip">
+          詳しい手順と設定項目の一覧は、<a href="https://github.com/shizaki-kanoto-lab/trpg_availability2notion#セットアップ">GitHub の README</a> にまとめています。
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <h2>質問・不具合の報告</h2>
+        <p>分かりにくいところや動かないところがあれば、<a href="https://github.com/shizaki-kanoto-lab/trpg_availability2notion/issues">GitHub の Issue</a> で気軽に教えてください。</p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <p>不具合・要望は、<a href="https://github.com/shizaki-kanoto-lab/trpg_availability2notion/issues" target="_blank" rel="noopener">Issues</a> か X（<a href="https://x.com/shizaki_kanoto" target="_blank" rel="noopener">@shizaki_kanoto</a>）までどうぞ。</p>
+      <p class="copyright"><small>&copy; 2026 隠れ家クロウラ ・ MIT License</small></p>
+      <a class="foot-logo" href="https://shizaki-kanoto.is-a.dev/" title="他のツールはこちら" aria-label="他のツールはこちら"><img src="https://shizaki-kanoto.is-a.dev/images/logo.png" alt="" width="48" height="48" loading="lazy"></a>
+    </div>
+  </footer>
+</body>
+</html>
