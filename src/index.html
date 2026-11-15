@@ -80,17 +80,20 @@
     .page { max-width: 880px; margin: 0 auto; padding: 32px 16px 120px; }
 
     header { margin-bottom: 20px; display: flex; align-items: center; gap: 14px; }
+    header > div { padding-right: 44px; } /* 右上の切り替えボタンと重ならないように */
     .app-icon { width: 52px; height: 52px; border-radius: 12px; flex: none; }
     h1 { margin: 0; font-size: 22px; letter-spacing: .02em; }
 
     /* ライト / ダークの切り替え */
     .theme-toggle {
-      margin-left: auto; align-self: flex-start; display: inline-flex; align-items: center; justify-content: center;
-      width: 38px; height: 38px; padding: 0; flex: none;
+      position: fixed; z-index: 10; top: max(12px, env(safe-area-inset-top)); right: max(calc(max(0px, (100% - 1120px) / 2) + var(--toggle-gutter, 16px)), env(safe-area-inset-right));
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 36px; height: 36px; padding: 0; flex: none;
       border-radius: 10px; border: 1px solid var(--border);
       background: var(--surface); color: var(--text); cursor: pointer;
       transition: border-color .15s ease;
     }
+    @media (min-width: 640px) { .theme-toggle { --toggle-gutter: 24px; } } /* トップページのヘッダーと同じ位置 */
     .theme-toggle:hover { border-color: var(--accent); }
     .theme-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
     .theme-toggle svg { width: 18px; height: 18px; }
