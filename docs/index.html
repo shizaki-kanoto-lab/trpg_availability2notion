@@ -91,7 +91,7 @@
     code { font-size: .92em; padding: 1px 6px; border-radius: 6px; background: var(--tip-bg); }
     .wrap { max-width: 880px; margin: 0 auto; padding: 0 16px; }
 
-    header.hero { padding: 56px 0 36px; }
+    header.hero { padding: 72px 0 36px; } /* 上に切り替えボタンの場所を空ける */
     .hero-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: center; }
     .hero h1 { font-size: clamp(1.6rem, 4.5vw, 2.2rem); line-height: 1.35; margin: 0 0 14px; }
     .hero .lead { font-size: 1.08rem; color: var(--muted); margin: 0; }
@@ -165,7 +165,7 @@
 
     /* ライト / ダークの切り替え（トップページと同じ localStorage の theme を使う） */
     .theme-toggle {
-      position: fixed; z-index: 10; top: max(12px, env(safe-area-inset-top)); right: max(calc(max(0px, (100% - 1120px) / 2) + var(--toggle-gutter, 16px)), env(safe-area-inset-right));
+      position: fixed; z-index: 10; top: max(var(--toggle-top, 16px), env(safe-area-inset-top)); right: max(calc(max(0px, (100% - 880px) / 2) + 16px), env(safe-area-inset-right)); /* 本文の右端にそろえる */
       display: inline-flex; align-items: center; justify-content: center;
       width: 36px; height: 36px; padding: 0;
       border-radius: 10px; border: 1px solid var(--border);
@@ -173,7 +173,6 @@
       box-shadow: 0 6px 18px -10px rgba(0, 0, 0, .45);
       transition: border-color .15s ease;
     }
-    @media (min-width: 640px) { .theme-toggle { --toggle-gutter: 24px; } } /* トップページのヘッダーと同じ位置 */
     .theme-toggle:hover { border-color: var(--primary); }
     .theme-toggle:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
     .theme-toggle svg { width: 18px; height: 18px; }
