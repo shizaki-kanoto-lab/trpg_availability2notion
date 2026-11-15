@@ -4,8 +4,12 @@
   <base target="_top">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>
+    try { var t = localStorage.getItem('theme'); if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
+  </script>
   <style>
     :root {
+      color-scheme: light;
       --bg: #f5f6f8;
       --surface: #ffffff;
       --border: #e3e6eb;
@@ -24,7 +28,8 @@
       --shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 1px 3px rgba(16, 24, 40, .08);
     }
     @media (prefers-color-scheme: dark) {
-      :root {
+      :root:not([data-theme="light"]) {
+        color-scheme: dark;
         --bg: #0f1115;
         --surface: #181b22;
         --border: #2a2f3a;
@@ -43,6 +48,25 @@
         --shadow: none;
       }
     }
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #0f1115;
+      --surface: #181b22;
+      --border: #2a2f3a;
+      --text: #e6e8ec;
+      --muted: #9aa1ad;
+      --accent: #818cf8;
+      --accent-hover: #a5b4fc;
+      --accent-soft: #23264a;
+      --ok: #4ade80;
+      --ok-soft: #12321f;
+      --ng: #6b7280;
+      --ng-soft: #22262e;
+      --sat: #60a5fa;
+      --sun: #f87171;
+      --danger: #f87171;
+      --shadow: none;
+    }
 
     * { box-sizing: border-box; }
     body {
@@ -58,6 +82,21 @@
     header { margin-bottom: 20px; display: flex; align-items: center; gap: 14px; }
     .app-icon { width: 52px; height: 52px; border-radius: 12px; flex: none; }
     h1 { margin: 0; font-size: 22px; letter-spacing: .02em; }
+
+    /* ライト / ダークの切り替え */
+    .theme-toggle {
+      margin-left: auto; align-self: flex-start; display: inline-flex; align-items: center; justify-content: center;
+      width: 38px; height: 38px; padding: 0; flex: none;
+      border-radius: 10px; border: 1px solid var(--border);
+      background: var(--surface); color: var(--text); cursor: pointer;
+      transition: border-color .15s ease;
+    }
+    .theme-toggle:hover { border-color: var(--accent); }
+    .theme-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .theme-toggle svg { width: 18px; height: 18px; }
+    .theme-toggle .sun { display: none; }
+    :root[data-theme="dark"] .theme-toggle .sun { display: block; }
+    :root[data-theme="dark"] .theme-toggle .moon { display: none; }
     .lead { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
 
     .card {
@@ -229,6 +268,10 @@
         <h1>空き枠をNotionに追加するツール</h1>
         <p class="lead">カレンダーの予定から判定した空き枠です。Notionに載せたい日を選んで追加してください。</p>
       </div>
+      <button class="theme-toggle" type="button" aria-label="ダークモードに切り替える">
+        <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </button>
     </header>
 
     <section class="card">
@@ -605,5 +648,25 @@ function addToNotion() {
 renderDays();
 </script>
 
+  <script>
+    (function () {
+      var root = document.documentElement;
+      var btn = document.querySelector('.theme-toggle');
+      var mq = window.matchMedia('(prefers-color-scheme: dark)');
+      function saved() { try { return localStorage.getItem('theme'); } catch (e) { return null; } }
+      function apply(theme) {
+        root.setAttribute('data-theme', theme);
+        btn.setAttribute('aria-label', theme === 'dark' ? 'ライトモードに切り替える' : 'ダークモードに切り替える');
+      }
+      apply(saved() || (mq.matches ? 'dark' : 'light'));
+      btn.addEventListener('click', function () {
+        var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        apply(next);
+        try { localStorage.setItem('theme', next); } catch (e) {}
+      });
+      // 手動で選んでいない間は OS の設定に合わせる
+      mq.addEventListener('change', function (e) { if (!saved()) apply(e.matches ? 'dark' : 'light'); });
+    })();
+  </script>
 </body>
 </html>
