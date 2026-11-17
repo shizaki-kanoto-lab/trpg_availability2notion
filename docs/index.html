@@ -18,6 +18,9 @@
   <script>
     try { var t = localStorage.getItem('theme'); if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
   </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg: #f5f6f9;
@@ -135,6 +138,7 @@
     .shot { margin: 0 auto; max-width: 560px; }
     .shot img { display: block; width: 100%; height: auto; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 14px 34px -22px rgba(0, 0, 0, .55); }
     .shot figcaption { margin-top: 10px; font-size: .9rem; color: var(--muted); }
+    .shot.wide { max-width: none; margin-top: 32px; }
     ul.check { list-style: none; padding: 0; margin: 0; }
     ul.check li { padding-left: 1.6em; position: relative; margin: 6px 0; }
     ul.check li::before { content: "✓"; position: absolute; left: 0; color: var(--accent-ink); font-weight: 700; }
@@ -188,6 +192,7 @@
       border-bottom: 1px solid var(--border);
     }
     .site-nav .wrap { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 60px; }
+    .site-nav { font-family: "Outfit", "Noto Sans JP", system-ui, sans-serif; }
     .site-nav .logo { display: flex; align-items: center; gap: 10px; color: var(--text); text-decoration: none; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; }
     .site-nav .logo img { display: block; width: 32px; height: 32px; }
     .site-nav .right { display: flex; align-items: center; gap: 4px; }
@@ -271,6 +276,10 @@
         <figure class="shot">
           <img src="screen.jpg" alt="空き枠をNotionに追加するツールの画面。取得期間とオプションの下に、日付ごとの朝・昼・夜の OK / NG が並び、下に「選択した空き枠をNotionに追加」ボタンがある" width="880" height="963" loading="lazy">
           <figcaption>Web アプリを開いたところ。判定結果を確かめて、登録したい日にチェックを付けてから「選択した空き枠をNotionに追加」を押します。</figcaption>
+        </figure>
+        <figure class="shot wide">
+          <img src="notion.jpg" alt="登録先の Notion データベース。「セッション可能」の行が日付ごとに並び、朝・昼・夜の列に OK / NG が入っている" width="1333" height="471" loading="lazy">
+          <figcaption>登録先の Notion データベース。日付ごとに朝・昼・夜の OK / NG が入るので、ビューで「卓可能」「夜」などに絞って共有できます。</figcaption>
         </figure>
       </div>
     </section>
