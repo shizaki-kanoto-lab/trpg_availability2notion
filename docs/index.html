@@ -83,6 +83,9 @@
     }
     * { box-sizing: border-box; }
     html { -webkit-text-size-adjust: 100%; }
+    /* 日本語の改行：最後の行が数文字だけにならないようにする。見出しは文節で折り返す（対応ブラウザのみ） */
+    body { line-break: strict; text-wrap: pretty; }
+    h1, h2, h3, h4 { word-break: auto-phrase; text-wrap: balance; }
     body {
       margin: 0;
       background: var(--bg);
@@ -224,7 +227,7 @@
   <header class="hero">
     <div class="wrap hero-grid">
       <div>
-        <h1>空き枠を<br>Notionに追加するツール</h1>
+        <h1>空き枠を<br>Notionに<wbr><span style="white-space: nowrap">追加するツール</span></h1>
         <p class="lead">Google カレンダーの予定から、TRPG セッションの空き枠（朝・昼・夜）を判定して、Notion の空き枠表に登録します。PL さんには、Web 公開した空き枠表を見てもらうだけ。無料で使えるツールです。</p>
         <div class="buttons">
           <a class="btn primary" href="https://github.com/shizaki-kanoto-lab/trpg_availability2notion#セットアップ">使い方を見る</a>
@@ -420,5 +423,26 @@
       mq.addEventListener('change', function () { apply(btn.getAttribute('data-mode')); });
     })();
   </script>
+<script>
+// 文の最後の数文字を切り離さない（「ます。」だけが次の行に残るのを防ぐ）
+(function () {
+  if (!window.Intl || !Intl.Segmenter) return;
+  var seg = new Intl.Segmenter('ja', { granularity: 'word' });
+  document.querySelectorAll('p, li, figcaption, .tip').forEach(function (el) {
+    if (el.querySelector('p, li, div')) return;
+    var n = el.lastChild;
+    while (n && n.nodeType === 3 && !n.data.trim()) n = n.previousSibling;
+    if (!n || n.nodeType !== 3) return;
+    var text = n.data.replace(/\s+$/, ''), words = Array.from(seg.segment(text)), tail = '';
+    while (words.length && tail.length < 6) tail = words.pop().segment + tail;
+    if (tail.length > 14 || el.textContent.trim().length < tail.length * 2) return;
+    var span = document.createElement('span');
+    span.style.whiteSpace = 'nowrap';
+    span.textContent = tail.replace(/^\s+/, '');
+    n.data = text.slice(0, text.length - span.textContent.length);
+    el.insertBefore(span, n.nextSibling);
+  });
+})();
+</script>
 </body>
 </html>
